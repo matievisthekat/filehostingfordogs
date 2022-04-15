@@ -3,10 +3,12 @@ extern crate rocket;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use rocket::data::{Data, ToByteUnit};
-use rocket::http::{Status, ContentType};
-use rocket::request::{FromRequest, Outcome, Request};
+use rocket::http::ContentType;
 use rocket::tokio;
-use std::fs::{self, File};
+use rocket_multipart_form_data::{
+    mime, MultipartFormData, MultipartFormDataField, MultipartFormDataOptions, Repetition,
+};
+use std::fs;
 use std::path::Path;
 
 #[get("/")]
@@ -15,19 +17,42 @@ fn index() -> &'static str {
 }
 
 #[post("/create", data = "<data>")]
-async fn create(data: Data<'_>, content_length: ContentLength) -> Result<String, std::io::Error> {
-    let name = thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(10)
-        .map(char::from)
-        .collect();
+async fn create(data: Data<'_>, content_type: &ContentType) -> Result<String, std::io::Error> {
+    let mut options = MultipartFormDataOptions::with_multipart_form_data_fields(vec![
+        MultipartFormDataField::file("file")
+            .content_type_by_string(Some(mime::STAR))
+            .unwrap(),
+        MultipartFormDataField::text("ext")
+            .content_type_by_string(Some(mime::TEXT_PLAIN))
+            .unwrap(),
+    ]);
 
-    let ext = "txt";
+    let mut form_data = MultipartFormData::parse(content_type, data, options)
+        .await
+        .unwrap();
 
-    let file = tokio::fs::File::create(Path::new(format!("storage/{}.{}", name, ext))).await?;
-    let stream = data.open(512.kibibytes());
+    let file_field = form_data.files.get("file");
+    let ext = form_data.texts.remove("ext");
 
-    return Ok("".into());
+    if let Some(file_fields) = file_field {
+        let file = &file_fields[0];
+
+        let f_content_type = &file.content_type;
+        let f_file_name = &file.file_name;
+        let f_path = &file.path;
+
+        let salt = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
+        
+
+        let file = tokio::fs::File::create(Path::new(format!("storage/{}.{}", name, ext))).await?;
+        let stream = data.open(512.kibibytes());
+
+        return Ok("".into());
+    }
 }
 
 #[rocket::main]
@@ -43,26 +68,4 @@ async fn main() {
         .launch()
         .await
         .unwrap_or_else(|e| panic!("Failed to launch the rocket: {}", e));
-}
-
-struct ContentLength(u64);
-
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for ContentLength {
-    type Error = String;
-
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let length = request
-            .headers()
-            .get_one("content-length")
-            .unwrap_or_else(|| "".into());
-        let length_as_num = length.parse::<u64>();
-        match length_as_num {
-            Ok(length_as_num) => Outcome::Success(ContentLength(length_as_num)),
-            _ => Outcome::Failure((
-                Status::InternalServerError,
-                "Failed to parse content length".into(),
-            )),
-        }
-    }
 }
