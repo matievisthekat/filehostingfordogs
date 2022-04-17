@@ -4,14 +4,23 @@ use rocket::data::{Limits, ToByteUnit};
 use rocket::fs::NamedFile;
 use rocket::http::{ContentType, Status};
 use rocket::response::status::Custom;
+use rocket::serde::{json::Json, Serialize};
 use rocket::Data;
 use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+#[derive(Serialize)]
+#[serde(crate = "rocket::serde")]
+struct File {}
+
 #[get("/")]
-fn index() -> &'static str {
-  "Hello, world!"
+fn index() -> Json<Vec<File>> {
+  let files = vec![];
+
+
+  
+  return Json(files);
 }
 
 #[get("/f/<file>")]
