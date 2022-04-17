@@ -43,7 +43,6 @@ async fn create(
             .to_string(),
           cnt_type = clean_content_type.to_string(),
           timestamp = timestamp,
-          // salt = salt
         ),
         base64::URL_SAFE_NO_PAD,
       );
@@ -52,7 +51,6 @@ async fn create(
       let res = data.open(limit).into_file(new_file_path).await;
 
       if let Ok(_) = res {
-        // return Ok(Created::new(format!("/f/{}", &encoded_name)));
         return Ok(format!("/f/{}.{}", &encoded_name, &ext));
       } else if let Err(e) = res {
         return Err(Custom(
