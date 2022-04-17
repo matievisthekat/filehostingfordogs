@@ -7,20 +7,51 @@ use rocket::response::status::Custom;
 use rocket::serde::{json::Json, Serialize};
 use rocket::Data;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Serialize)]
 #[serde(crate = "rocket::serde")]
-struct File {}
+struct File {
+  og_name: String,
+  cnt_type: String,
+  timestamp: String,
+}
 
 #[get("/")]
 fn index() -> Json<Vec<File>> {
-  let files = vec![];
+  let mut response_files = vec![];
 
+  let files = fs::read_dir(Path::new("storage")).unwrap();
 
-  
-  return Json(files);
+  for file in files {
+    let entry = file.unwrap();
+    let name = entry.file_name();
+
+    let buf = base64::decode_config::<String>(
+      name
+        .to_str()
+        .unwrap()
+        .split('.')
+        .collect::<Vec<&str>>()
+        .get(0).unwrap().to_string(),
+      base64::URL_SAFE_NO_PAD,
+    )
+    .unwrap();
+    let decoded = std::str::from_utf8(&buf).unwrap();
+    let split_name = decoded.split("::").collect::<Vec<&str>>();
+    let og_name = split_name[0];
+    let cnt_type = split_name[1];
+    let timestamp = split_name[2];
+
+    response_files.push(File {
+      og_name: og_name.to_string(),
+      cnt_type: cnt_type.to_string(),
+      timestamp: timestamp.to_string(),
+    });
+  }
+
+  return Json(response_files);
 }
 
 #[get("/f/<file>")]
