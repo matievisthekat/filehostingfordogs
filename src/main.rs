@@ -34,7 +34,9 @@ fn index() -> Json<Vec<File>> {
         .unwrap()
         .split('.')
         .collect::<Vec<&str>>()
-        .get(0).unwrap().to_string(),
+        .get(0)
+        .unwrap()
+        .to_string(),
       base64::URL_SAFE_NO_PAD,
     )
     .unwrap();
@@ -88,11 +90,7 @@ async fn create(
       let encoded_name = base64::encode_config(
         format!(
           "{original_name}::{cnt_type}::{timestamp}",
-          original_name = og_name
-            .unwrap_or("unknown".into())
-            .get(0..7)
-            .unwrap_or("unknown".into()) // this is quite easily the ugliest piece of code i've ever written
-            .to_string(),
+          original_name = og_name.unwrap_or("unknown".into()).to_string(),
           cnt_type = clean_content_type.to_string(),
           timestamp = timestamp,
         ),
