@@ -52,7 +52,7 @@ async fn create(
 
         if let Ok(_) = res {
           // return Ok(Created::new(format!("/f/{}", &encoded_name)));
-          return Ok(format!("/f/{}", &encoded_name));
+          return Ok(format!("/f/{}.{}", &encoded_name, &ext));
         } else if let Err(e) = res {
           return Err(Custom(
             Status::InternalServerError,
