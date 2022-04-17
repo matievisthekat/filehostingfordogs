@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate rocket;
 use rocket::data::{Limits, ToByteUnit};
+use rocket::fs::NamedFile;
 use rocket::http::{ContentType, Status};
 use rocket::response::status::Custom;
 use rocket::Data;
@@ -11,6 +12,17 @@ use std::time::{SystemTime, UNIX_EPOCH};
 #[get("/")]
 fn index() -> &'static str {
   "Hello, world!"
+}
+
+#[get("/f/<file>")]
+async fn get_file(file: String) -> Result<NamedFile, Custom<String>> {
+  let path = PathBuf::from(format!("storage/{}", file));
+  let named_file = NamedFile::open(path).await;
+
+  match named_file {
+    Ok(named_file) => Ok(named_file),
+    Err(_) => Err(Custom(Status::NotFound, "File not found".to_string())),
+  }
 }
 
 #[post("/create?<ext>&<og_name>", data = "<data>", format = "*/*")]
@@ -86,7 +98,7 @@ async fn main() {
   });
 
   rocket::build()
-    .mount("/", routes![index, create])
+    .mount("/", routes![index, create, get_file])
     .launch()
     .await
     .unwrap_or_else(|e| panic!("Failed to launch the rocket: {}", e));
