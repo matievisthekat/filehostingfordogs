@@ -4,6 +4,7 @@ use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use rocket::data::Data;
 use rocket::http::ContentType;
+use rocket::response::status::{BadRequest, Created};
 use rocket_multipart_form_data::{
     MultipartFormData, MultipartFormDataField, MultipartFormDataOptions,
 };
@@ -17,7 +18,10 @@ fn index() -> &'static str {
 }
 
 #[post("/create", data = "<data>")]
-async fn create(data: Data<'_>, content_type: &ContentType) -> Result<String, std::io::Error> {
+async fn create(
+    data: Data<'_>,
+    content_type: &ContentType,
+) -> Result<Created<String>, BadRequest<String>> {
     let options = MultipartFormDataOptions::with_multipart_form_data_fields(vec![
         MultipartFormDataField::file("file")
             .content_type_by_string(Some("*/*"))
@@ -65,20 +69,14 @@ async fn create(data: Data<'_>, content_type: &ContentType) -> Result<String, st
             );
 
             let new_file_path = PathBuf::from(format!("storage/{}.{}", &encoded_name, &ext));
-            fs::copy(f_path, new_file_path).expect("Failed to compy file into `storage/` folder");
+            fs::copy(f_path, new_file_path).expect("Failed to copy file into `storage/` folder");
 
-            return Ok("".into());
+            return Ok(Created::new(format!("/f/{}", &encoded_name)));
         } else {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Missing 'file' input field",
-            ));
+            return Err(BadRequest(Some("Missing 'file' input field".into())));
         }
     } else {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Missing 'ext' input field",
-        ));
+        return Err(BadRequest(Some("Missing 'ext' input field".into())));
     }
 }
 
