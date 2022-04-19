@@ -13,6 +13,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 #[derive(Serialize)]
 #[serde(crate = "rocket::serde")]
 struct File {
+  url: String,
   og_name: String,
   cnt_type: String,
   timestamp: String,
@@ -47,6 +48,7 @@ fn index() -> Json<Vec<File>> {
     let timestamp = split_name[2];
 
     response_files.push(File {
+      url: format!("/{}", name.to_str().unwrap()),
       og_name: og_name.to_string(),
       cnt_type: cnt_type.to_string(),
       timestamp: timestamp.to_string(),
